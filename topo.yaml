@@ -1,0 +1,123 @@
+name: k8s-pod-as-a-forwarding-function
+topology:
+  kinds:
+    linux:
+      cmd: bash
+  nodes:
+    router0:
+      kind: linux
+      image: yutarohayakawa/frr:alpine-926e00236e
+      exec:
+      - ip addr add 10.0.0.1/24 dev net0
+      - ip addr add 10.0.1.1/24 dev net1
+      - ip addr add 10.0.2.1/24 dev net2
+      - ip addr add 10.0.3.1/24 dev net3
+      - ip addr add 10.0.4.1/24 dev net4
+      - ip addr add 10.0.5.1/24 dev net5
+      # Handle all egress traffic from lab
+      - iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+      # Boiler plate to make FRR work
+      - touch /etc/frr/vtysh.conf
+      - sed -i -e 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+      - /usr/lib/frr/frrinit.sh start
+      # FRR configuration
+      - >-
+         vtysh -c 'conf t'
+         -c 'frr defaults datacenter'
+         -c 'router bgp 65000'
+         -c '  bgp router-id 10.0.0.0'
+         -c '  no bgp ebgp-requires-policy'
+         -c '  neighbor SERVERS peer-group'
+         -c '  neighbor SERVERS remote-as external'
+         -c '  neighbor 10.0.0.2 peer-group SERVERS'
+         -c '  neighbor 10.0.1.2 peer-group SERVERS'
+         -c '  neighbor 10.0.2.2 peer-group SERVERS'
+         -c '  neighbor 10.0.3.2 peer-group SERVERS'
+         -c '  neighbor 10.0.4.2 peer-group SERVERS'
+         -c '  neighbor 10.0.5.2 peer-group SERVERS'
+         -c '!'
+    server0:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      network-mode: "container:control-plane"
+      exec:
+      - ip addr add 10.0.0.2/24 dev net0
+      - ip route replace default via 10.0.0.1
+    server1:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      network-mode: "container:worker"
+      exec:
+      - ip addr add 10.0.1.2/24 dev net0
+      - ip route replace default via 10.0.1.1
+    server2:
+      kind: linux
+      image: nicolaka/netshoot:latest
+      network-mode: "container:worker2"
+      exec:
+      - ip addr add 10.0.2.2/24 dev net0
+      - ip route replace default via 10.0.2.1
+    server3:
+      kind: linux
+      image: yutarohayakawa/frr:alpine-926e00236e
+      exec:
+      - ip addr add 10.0.3.2/24 dev net0
+      - ip route replace default via 10.0.3.1
+      - touch /etc/frr/vtysh.conf
+      - sed -i -e 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+      - /usr/lib/frr/frrinit.sh start
+      - >-
+         vtysh -c 'conf t'
+         -c 'frr defaults datacenter'
+         -c 'router bgp 65013'
+         -c '  bgp router-id 10.255.0.3'
+         -c '  no bgp ebgp-requires-policy'
+         -c '  neighbor ROUTER peer-group'
+         -c '  neighbor ROUTER remote-as external'
+         -c '  neighbor 10.0.3.1 peer-group ROUTER'
+         -c '!'
+    server4:
+      kind: linux
+      image: yutarohayakawa/frr:alpine-926e00236e
+      exec:
+      - ip addr add 10.0.4.2/24 dev net0
+      - ip route replace default via 10.0.4.1
+      - touch /etc/frr/vtysh.conf
+      - sed -i -e 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+      - /usr/lib/frr/frrinit.sh start
+      - >-
+         vtysh -c 'conf t'
+         -c 'frr defaults datacenter'
+         -c 'router bgp 65014'
+         -c '  bgp router-id 10.255.0.4'
+         -c '  no bgp ebgp-requires-policy'
+         -c '  neighbor ROUTER peer-group'
+         -c '  neighbor ROUTER remote-as external'
+         -c '  neighbor 10.0.4.1 peer-group ROUTER'
+         -c '!'
+    server5:
+      kind: linux
+      image: yutarohayakawa/frr:alpine-926e00236e
+      exec:
+      - ip addr add 10.0.5.2/24 dev net0
+      - ip route replace default via 10.0.5.1
+      - touch /etc/frr/vtysh.conf
+      - sed -i -e 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+      - /usr/lib/frr/frrinit.sh start
+      - >-
+         vtysh -c 'conf t'
+         -c 'frr defaults datacenter'
+         -c 'router bgp 65015'
+         -c '  bgp router-id 10.255.0.5'
+         -c '  no bgp ebgp-requires-policy'
+         -c '  neighbor ROUTER peer-group'
+         -c '  neighbor ROUTER remote-as external'
+         -c '  neighbor 10.0.5.1 peer-group ROUTER'
+         -c '!'
+  links:
+  - endpoints: ["router0:net0", "server0:net0"]
+  - endpoints: ["router0:net1", "server1:net0"]
+  - endpoints: ["router0:net2", "server2:net0"]
+  - endpoints: ["router0:net3", "server3:net0"]
+  - endpoints: ["router0:net4", "server4:net0"]
+  - endpoints: ["router0:net5", "server5:net0"]

@@ -13,3 +13,9 @@ flowchart TB
   Router0---Server4
   Router0---Server5
 ```
+
+## How to use `make`
+
+- Create Lab: `make deploy`
+- Destroy Lab: `make destroy`
+- Recreate Lab: `make redeploy`

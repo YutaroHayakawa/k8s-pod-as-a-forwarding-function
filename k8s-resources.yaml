@@ -1,0 +1,45 @@
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+ name: server0
+spec:
+ nodeSelector:
+   matchLabels:
+     kubernetes.io/hostname: clab-k8s-pod-as-a-forwarding-function-control-plane
+ virtualRouters:
+ - localASN: 65010
+   exportPodCIDR: true
+   neighbors:
+    - peerAddress: 10.0.0.1/32
+      peerASN: 65000
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+ name: server1
+spec:
+ nodeSelector:
+   matchLabels:
+     kubernetes.io/hostname: clab-k8s-pod-as-a-forwarding-function-worker
+ virtualRouters:
+ - localASN: 65011
+   exportPodCIDR: true
+   neighbors:
+    - peerAddress: 10.0.1.1/32
+      peerASN: 65000
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumBGPPeeringPolicy
+metadata:
+ name: server2
+spec:
+ nodeSelector:
+   matchLabels:
+     kubernetes.io/hostname: clab-k8s-pod-as-a-forwarding-function-worker2
+ virtualRouters:
+ - localASN: 65012
+   exportPodCIDR: true
+   neighbors:
+    - peerAddress: 10.0.2.1/32
+      peerASN: 65000
